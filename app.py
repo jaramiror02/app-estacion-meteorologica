@@ -19,7 +19,7 @@ st.markdown("---")
 # 2. CONEXIÓN CON LA API DEL PROFESOR
 # ==========================================
 # Esta es la dirección web de nuestro servidor central en Render
-URL_API = "https://estacion-meteorologica.onrender.com/api/estado"
+URL_API = "https://servidor-estacion-meteorologica.onrender.com"
 
 
 def obtener_datos_meteorologicos():
