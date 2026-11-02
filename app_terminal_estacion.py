@@ -3,240 +3,348 @@ import requests
 import streamlit as st
 
 # ==========================================
-# 1. CONFIGURACIÓN DE LA PÁGINA
+# 1. CONFIGURACIÓN
 # ==========================================
 
 st.set_page_config(
     page_title="Estación Meteorológica - IES Virgen de Gracia",
     page_icon="⛅",
     layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
+URL_API = "https://estacion-meteorologica-profe.onrender.com/api/estado"
+
 # ==========================================
-# 2. ESTILOS VISUALES (CSS)
+# 2. DISEÑO VISUAL
 # ==========================================
 
 st.markdown("""
 <style>
 
+/* Fondo general */
+
 .stApp {
-    background-color: #050505;
-    color: #ffffff;
+    background: #030607;
+    color: white;
 }
 
-.weather-card {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    padding: 22px;
-    border-radius: 18px;
+header[data-testid="stHeader"] {
+    background: transparent;
+    height: 0;
+}
+
+.block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 0rem !important;
+    padding-left: 3% !important;
+    padding-right: 3% !important;
+    max-width: 1600px;
+}
+
+#MainMenu, footer {
+    visibility: hidden;
+}
+
+/* Cabecera */
+
+.titulo {
     text-align: center;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    margin-bottom: 18px;
-    min-height: 155px;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #f4f8ff;
+    margin-bottom: 0px;
+    letter-spacing: 1px;
+}
+
+.subtitulo {
+    text-align: center;
+    color: #00ff80;
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.linea {
+    height: 3px;
+    background: linear-gradient(
+        90deg, transparent, #00ff80, transparent
+    );
+    margin: 8px 0;
+}
+
+.actualizacion {
+    text-align: center;
+    color: #b9d4e9;
+    font-size: 0.9rem;
+    margin: 8px 0 12px 0;
+}
+
+/* Tarjetas */
+
+.weather-card {
+    height: 125px;
+    border-radius: 19px;
+    background: linear-gradient(
+        145deg,
+        rgba(27,32,42,0.96),
+        rgba(3,8,12,0.98)
+    );
+    border: 1px solid #35404d;
+    padding: 12px 8px;
+    text-align: center;
+    margin-bottom: 12px;
+    box-shadow: 0 5px 12px rgba(0,0,0,0.5);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .weather-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 10px 25px rgba(0, 255, 128, 0.25);
-    border-color: #00ff80;
+    transform: translateY(-4px);
+    filter: brightness(1.3);
 }
 
 .weather-icon {
-    font-size: 2.5rem;
-    margin-bottom: 8px;
+    font-size: 1.9rem;
+    margin-bottom: 2px;
 }
 
-.weather-card h3 {
-    margin: 0;
-    font-size: 0.95rem;
-    color: #a0b0c0;
+.weather-label {
+    color: #b9c8df;
+    font-size: 0.85rem;
+    font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
-.weather-card h2 {
-    margin-top: 12px;
-    font-size: 2rem;
+.weather-value {
     color: #ffffff;
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-top: 3px;
 }
 
-.main-title {
-    text-align: center;
-    font-size: 2.2rem;
-    font-weight: bold;
-    color: #ffffff;
-    margin-bottom: 5px;
-}
-
-.subtitle {
-    text-align: center;
-    color: #00ff80;
-    font-size: 1.25rem;
-    margin-bottom: 20px;
-}
-
-.update {
-    text-align: center;
-    color: #b0c0d0;
+.weather-unit {
     font-size: 1rem;
-    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+/* Colores de las tarjetas */
+
+.red {
+    border-bottom: 4px solid #ff303b;
+    box-shadow: 0 4px 15px rgba(255,48,59,0.15);
+}
+
+.blue {
+    border-bottom: 4px solid #00aaff;
+    box-shadow: 0 4px 15px rgba(0,170,255,0.15);
+}
+
+.cyan {
+    border-bottom: 4px solid #00d9e8;
+    box-shadow: 0 4px 15px rgba(0,217,232,0.15);
+}
+
+.purple {
+    border-bottom: 4px solid #b34cff;
+    box-shadow: 0 4px 15px rgba(179,76,255,0.15);
+}
+
+.yellow {
+    border-bottom: 4px solid #ffd000;
+    box-shadow: 0 4px 15px rgba(255,208,0,0.15);
+}
+
+.green {
+    border-bottom: 4px solid #61ff36;
+    box-shadow: 0 4px 15px rgba(97,255,54,0.15);
+}
+
+.turquoise {
+    border-bottom: 4px solid #00e5c5;
+    box-shadow: 0 4px 15px rgba(0,229,197,0.15);
+}
+
+/* Avisos */
+
+.aviso {
+    background: rgba(255,190,0,0.10);
+    border: 1px solid #d6a900;
+    border-radius: 12px;
+    color: #ffd000;
+    padding: 9px;
+    text-align: center;
+    font-weight: bold;
+    margin-top: 2px;
+    font-size: 0.95rem;
+}
+
+/* Pie */
+
+.pie {
+    text-align: center;
+    color: #667777;
+    font-size: 0.72rem;
+    margin-top: 5px;
+}
+
+@media (max-height: 800px) {
+    .weather-card {
+        height: 105px;
+        padding: 6px;
+        margin-bottom: 7px;
+    }
+
+    .weather-value {
+        font-size: 1.9rem;
+    }
+
+    .weather-icon {
+        font-size: 1.5rem;
+    }
+
+    .titulo {
+        font-size: 1.65rem;
+    }
+
+    .actualizacion {
+        margin: 4px 0 7px 0;
+    }
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. TÍTULO DEL CENTRO
+# 3. CABECERA
 # ==========================================
 
 st.markdown("""
-<div class="main-title">
-    ⛅ Estación Meteorológica
+<div class="titulo">
+    ⛅ ESTACIÓN METEOROLÓGICA
 </div>
-<div class="subtitle">
-    IES Virgen de Gracia · Oliva de la Frontera
+
+<div class="subtitulo">
+    IES VIRGEN DE GRACIA · OLIVA DE LA FRONTERA
 </div>
+
+<div class="linea"></div>
 """, unsafe_allow_html=True)
 
-st.markdown("---")
-
 # ==========================================
-# 4. CONEXIÓN CON EL SERVIDOR DE RENDER
+# 4. CONEXIÓN CON RENDER
 # ==========================================
 
-URL_API = "https://estacion-meteorologica-profe.onrender.com/api/estado"
-
-
+@st.cache_data(ttl=30)
 def obtener_datos():
     try:
-        response = requests.get(URL_API, timeout=15)
+        respuesta = requests.get(URL_API, timeout=15)
+        respuesta.raise_for_status()
+        return respuesta.json()
+    except (requests.RequestException, ValueError):
+        return None
 
-        if response.status_code == 200:
-            return response.json()
 
-    except requests.RequestException:
-        pass
-
-    return None
-
+datos = obtener_datos()
 
 # ==========================================
 # 5. FUNCIÓN PARA CREAR TARJETAS
 # ==========================================
 
-def tarjeta(columna, icono, titulo, valor, unidad=""):
+def tarjeta(columna, icono, titulo, valor, unidad, color):
+
+    if valor is None:
+        valor = "--"
+
     columna.markdown(f"""
-    <div class="weather-card">
+    <div class="weather-card {color}">
         <div class="weather-icon">{icono}</div>
-        <h3>{titulo}</h3>
-        <h2>{valor} {unidad}</h2>
+        <div class="weather-label">{titulo}</div>
+        <div class="weather-value">
+            {valor} <span class="weather-unit">{unidad}</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
 
 # ==========================================
-# 6. OBTENER Y MOSTRAR LOS DATOS
+# 6. MOSTRAR DATOS
 # ==========================================
-
-datos = obtener_datos()
 
 if datos:
 
     st.markdown(
-        f"""
-        <div class="update">
-        📅 Última actualización: {datos.get('fecha', 'N/D')}
-        </div>
-        """,
+        f'<div class="actualizacion">📅 Última actualización: '
+        f'{datos.get("fecha", "N/D")}</div>',
         unsafe_allow_html=True
     )
 
-    # Primera fila: temperatura, humedad y viento
+    # FILA 1
 
-    col1, col2, col3 = st.columns(3)
+    c1, c2, c3 = st.columns(3)
 
-    tarjeta(
-        col1, "🌡️", "Temperatura",
-        datos.get("temperatura_C", "--"), "°C"
-    )
+    tarjeta(c1, "🌡️", "Temperatura",
+            datos.get("temperatura_C"), "°C", "red")
 
-    tarjeta(
-        col2, "💧", "Humedad",
-        datos.get("humedad_pct", "--"), "%"
-    )
+    tarjeta(c2, "💧", "Humedad",
+            datos.get("humedad_pct"), "%", "blue")
 
-    tarjeta(
-        col3, "💨", "Viento",
-        datos.get("viento_kmh", "--"), "km/h"
-    )
+    tarjeta(c3, "💨", "Viento",
+            datos.get("viento_kmh"), "km/h", "cyan")
 
-    # Segunda fila: ráfaga, lluvia e índice UV
+    # FILA 2
 
-    col4, col5, col6 = st.columns(3)
+    c4, c5, c6 = st.columns(3)
 
-    tarjeta(
-        col4, "🌪️", "Ráfaga",
-        datos.get("rafaga_kmh", "--"), "km/h"
-    )
+    tarjeta(c4, "🌪️", "Ráfaga",
+            datos.get("rafaga_kmh"), "km/h", "purple")
 
-    tarjeta(
-        col5, "🌧️", "Lluvia",
-        datos.get("lluvia_acumulada_mm", "--"), "mm"
-    )
+    tarjeta(c5, "🌧️", "Lluvia",
+            datos.get("lluvia_acumulada_mm"), "mm", "blue")
 
-    tarjeta(
-        col6, "☀️", "Índice UV",
-        datos.get("indice_uv", "--")
-    )
+    tarjeta(c6, "☀️", "Índice UV",
+            datos.get("indice_uv"), "", "yellow")
 
-    # Tercera fila: radiación solar y dirección del viento
+    # FILA 3
 
-    col7, col8 = st.columns(2)
+    c7, c8 = st.columns(2)
 
-    tarjeta(
-        col7, "🔆", "Radiación solar",
-        datos.get("radiacion_solar_W_m2", "--"), "W/m²"
-    )
+    tarjeta(c7, "🔆", "Radiación solar",
+            datos.get("radiacion_solar_W_m2"), "W/m²", "green")
 
-    tarjeta(
-        col8, "🧭", "Dirección del viento",
-        datos.get("direccion_viento_grados", "--"), "°"
-    )
+    tarjeta(c8, "🧭", "Dirección del viento",
+            datos.get("direccion_viento_grados"), "°", "turquoise")
 
-    # ==========================================
-    # 7. AVISOS METEOROLÓGICOS
-    # ==========================================
-
-    temperatura = datos.get("temperatura_C")
+    # AVISOS
 
     try:
-        if temperatura is not None and float(temperatura) > 25:
-            st.warning(
-                "⚠️ ¡Aviso educativo: Temperatura superior a 25 °C!"
-            )
+        temperatura = float(datos.get("temperatura_C"))
+
+        if temperatura > 25:
+            st.markdown("""
+            <div class="aviso">
+                ⚠️ ¡Aviso educativo: Temperatura superior a 25 °C!
+            </div>
+            """, unsafe_allow_html=True)
+
     except (ValueError, TypeError):
         pass
 
 else:
 
-    st.error(
-        "⚠️ No se pudo conectar con el servidor meteorológico."
-    )
-
-    st.info(
-        "Comprueba que el servidor de Render está funcionando."
-    )
+    st.error("⚠️ No se pudo conectar con el servidor meteorológico.")
 
 # ==========================================
-# 8. PIE DE PÁGINA
+# 7. PIE DE PÁGINA
 # ==========================================
-
-st.markdown("---")
 
 st.markdown("""
-<div style="text-align:center; color:#777; padding:10px;">
-    IES Virgen de Gracia · Oliva de la Frontera<br>
-    Proyecto educativo de Tecnología e Ingeniería
+<div class="pie">
+    Proyecto educativo de Tecnología e Ingeniería · IES Virgen de Gracia
 </div>
 """, unsafe_allow_html=True)
+
