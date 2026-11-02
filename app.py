@@ -78,11 +78,4 @@ else:
   # Mensaje si el servidor no responde
   st.error("⚠️ No se ha podido conectar con el servidor central de la estación.")
 
-4.	Guarda los cambios haciendo clic en Commit changes.
-B. Archivo requirements.txt
-1.	Vuelve a hacer clic en Add file -> Create new file.
-2.	Nómbralo: requirements.txt
-3.	Pega estas dos líneas:
-Plaintext
-streamlit
-requests
+
