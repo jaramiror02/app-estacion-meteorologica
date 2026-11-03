@@ -1,4 +1,4 @@
-
+import plotly.express as px
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
@@ -408,6 +408,7 @@ with pestana_actual:
 
 
 
+
 # =====================================================
 # 9. PESTAÑA DE EVOLUCIÓN DEL DÍA ACTUAL
 # =====================================================
@@ -437,55 +438,40 @@ with pestana_historico:
             df = pd.DataFrame(registros)
 
             # -----------------------------------------
-            # PREPARAR LAS FECHAS Y HORAS
+            # FILTRAR DESDE MEDIANOCHE HASTA AHORA
             # -----------------------------------------
 
-            if "epoch" in df.columns:
+            ahora = pd.Timestamp.now(tz="Europe/Madrid")
+            inicio_dia = ahora.normalize()
 
-                df["epoch"] = pd.to_numeric(
-                    df["epoch"],
-                    errors="coerce"
-                )
+            df["epoch"] = pd.to_numeric(
+                df["epoch"],
+                errors="coerce"
+            )
 
-                df = df.dropna(subset=["epoch"])
+            df = df.dropna(subset=["epoch"])
 
-                df["hora"] = (
-                    pd.to_datetime(
-                        df["epoch"],
-                        unit="s",
-                        utc=True
-                    )
-                    .dt.tz_convert("Europe/Madrid")
-                    .dt.strftime("%H:%M")
-                )
-
-                # Hora actual en España
-                ahora = pd.Timestamp.now(tz="Europe/Madrid")
-
-                # Inicio del día actual
-                inicio_dia = ahora.normalize()
-
-                # Convertir los registros a hora española
-                fechas = pd.to_datetime(
+            df["fecha_hora"] = pd.to_datetime(
                 df["epoch"],
                 unit="s",
                 utc=True
-                ).dt.tz_convert("Europe/Madrid")
+            ).dt.tz_convert("Europe/Madrid")
 
+            df = df[
+                (df["fecha_hora"] >= inicio_dia) &
+                (df["fecha_hora"] <= ahora)
+            ].copy()
 
-            elif "fecha" in df.columns:
+            df = df.sort_values("fecha_hora")
 
-                df["hora"] = df["fecha"].astype(str)
+            if df.empty:
+
+                st.info("Todavía no hay observaciones para mostrar.")
 
             else:
 
-                st.warning("No se encuentran las fechas de los registros.")
-                df = pd.DataFrame()
-
-            if not df.empty:
-
                 # -----------------------------------------
-                # ESTILO DE LAS GRÁFICAS
+                # ESTILO
                 # -----------------------------------------
 
                 st.markdown("""
@@ -517,40 +503,55 @@ with pestana_historico:
                 </style>
                 """, unsafe_allow_html=True)
 
-                # -----------------------------------------
-                # ENCABEZADO DEL HISTÓRICO
-                # -----------------------------------------
-
                 st.markdown("""
                 <div class="grafica-titulo">
                     📅 Evolución meteorológica de hoy
                 </div>
                 <div class="grafica-subtitulo">
-                    Registros desde las 00:00 hasta la hora actual
+                    Desde las 00:00 hasta la hora actual
                 </div>
                 """, unsafe_allow_html=True)
 
                 st.caption(
-                    f"Registros disponibles: {len(df)}"
+                    f"Registros disponibles: {len(df)} · "
+                    f"Última hora de consulta: {ahora.strftime('%H:%M')}"
                 )
 
+                # Configuración común de las gráficas
+                configuracion = {
+                    "paper_bgcolor": "#030607",
+                    "plot_bgcolor": "#0b1720",
+                    "font": {"color": "#dceaf2"},
+                    "margin": {"l": 35, "r": 20, "t": 25, "b": 40},
+                    "xaxis": {
+                        "title": "",
+                        "range": [inicio_dia, ahora],
+                        "showgrid": False,
+                        "color": "#9eb3c1"
+                    },
+                    "yaxis": {
+                        "gridcolor": "#203542",
+                        "zerolinecolor": "#203542",
+                        "color": "#9eb3c1"
+                    },
+                    "hovermode": "x unified"
+                }
+
                 # -----------------------------------------
-                # GRÁFICA DE TEMPERATURA
+                # TEMPERATURA
                 # -----------------------------------------
 
                 st.markdown("""
-                <div class="grafica-titulo">
-                    🌡️ Temperatura
-                </div>
+                <div class="grafica-titulo">🌡️ Temperatura</div>
                 <div class="grafica-subtitulo">
-                    Evolución de la temperatura durante el día de hoy
+                    Evolución de la temperatura durante el día
                 </div>
                 """, unsafe_allow_html=True)
 
                 if "temperatura_C" in df.columns:
 
                     df_temp = df[
-                        ["hora", "temperatura_C"]
+                        ["fecha_hora", "temperatura_C"]
                     ].copy()
 
                     df_temp["temperatura_C"] = pd.to_numeric(
@@ -562,33 +563,45 @@ with pestana_historico:
 
                     if not df_temp.empty:
 
-                        st.line_chart(
-                            df_temp.set_index("hora"),
-                            color="#FF6B6B",
-                            height=300
+                        fig_temp = px.line(
+                            df_temp,
+                            x="fecha_hora",
+                            y="temperatura_C",
+                            markers=True
                         )
 
-                    else:
+                        fig_temp.update_traces(
+                            line=dict(color="#FF6B6B", width=3),
+                            marker=dict(size=5, color="#FF6B6B"),
+                            name="Temperatura"
+                        )
 
-                        st.info("No hay datos de temperatura.")
+                        fig_temp.update_layout(
+                            **configuracion,
+                            yaxis_title="Temperatura (°C)"
+                        )
+
+                        st.plotly_chart(
+                            fig_temp,
+                            use_container_width=True,
+                            config={"displayModeBar": False}
+                        )
 
                 # -----------------------------------------
-                # GRÁFICA DE LLUVIA
+                # LLUVIA
                 # -----------------------------------------
 
                 st.markdown("""
-                <div class="grafica-titulo">
-                    🌧️ Precipitación
-                </div>
+                <div class="grafica-titulo">🌧️ Precipitación</div>
                 <div class="grafica-subtitulo">
-                    Lluvia registrada durante el día de hoy
+                    Lluvia registrada durante el día
                 </div>
                 """, unsafe_allow_html=True)
 
                 if "lluvia_mm" in df.columns:
 
                     df_lluvia = df[
-                        ["hora", "lluvia_mm"]
+                        ["fecha_hora", "lluvia_mm"]
                     ].copy()
 
                     df_lluvia["lluvia_mm"] = pd.to_numeric(
@@ -600,15 +613,27 @@ with pestana_historico:
 
                     if not df_lluvia.empty:
 
-                        st.bar_chart(
-                            df_lluvia.set_index("hora"),
-                            color="#35C6FF",
-                            height=250
+                        fig_lluvia = px.bar(
+                            df_lluvia,
+                            x="fecha_hora",
+                            y="lluvia_mm"
                         )
 
-                    else:
+                        fig_lluvia.update_traces(
+                            marker_color="#35C6FF",
+                            name="Lluvia"
+                        )
 
-                        st.info("No hay datos de lluvia.")
+                        fig_lluvia.update_layout(
+                            **configuracion,
+                            yaxis_title="Lluvia (mm)"
+                        )
+
+                        st.plotly_chart(
+                            fig_lluvia,
+                            use_container_width=True,
+                            config={"displayModeBar": False}
+                        )
 
                 # -----------------------------------------
                 # RESUMEN DEL DÍA
@@ -623,32 +648,19 @@ with pestana_historico:
                 </div>
                 """, unsafe_allow_html=True)
 
+                temperaturas = pd.to_numeric(
+                    df["temperatura_C"],
+                    errors="coerce"
+                ).dropna() if "temperatura_C" in df.columns else pd.Series(dtype=float)
+
+                lluvias = pd.to_numeric(
+                    df["lluvia_mm"],
+                    errors="coerce"
+                ).dropna() if "lluvia_mm" in df.columns else pd.Series(dtype=float)
+
                 col1, col2, col3 = st.columns(3)
 
-                if "temperatura_C" in df.columns:
-
-                    temperaturas = pd.to_numeric(
-                        df["temperatura_C"],
-                        errors="coerce"
-                    ).dropna()
-
-                else:
-
-                    temperaturas = pd.Series(dtype=float)
-
-                if "lluvia_mm" in df.columns:
-
-                    lluvias = pd.to_numeric(
-                        df["lluvia_mm"],
-                        errors="coerce"
-                    ).dropna()
-
-                else:
-
-                    lluvias = pd.Series(dtype=float)
-
                 with col1:
-
                     st.metric(
                         "🌡️ Temperatura máxima",
                         f"{temperaturas.max():.1f} °C"
@@ -656,7 +668,6 @@ with pestana_historico:
                     )
 
                 with col2:
-
                     st.metric(
                         "❄️ Temperatura mínima",
                         f"{temperaturas.min():.1f} °C"
@@ -664,7 +675,6 @@ with pestana_historico:
                     )
 
                 with col3:
-
                     st.metric(
                         "🌧️ Lluvia registrada",
                         f"{lluvias.sum():.1f} mm"
