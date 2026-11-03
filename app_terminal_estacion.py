@@ -407,8 +407,9 @@ with pestana_actual:
 
 
 
+
 # =====================================================
-# 9. PESTAÑA DE EVOLUCIÓN DE LAS ÚLTIMAS 24 HORAS
+# 9. PESTAÑA DE EVOLUCIÓN DEL DÍA ACTUAL
 # =====================================================
 
 with pestana_historico:
@@ -429,177 +430,234 @@ with pestana_historico:
 
         if not registros:
 
-            st.info("Todavía no hay registros históricos disponibles.")
+            st.info("Todavía no hay registros disponibles para hoy.")
 
         else:
 
             df = pd.DataFrame(registros)
 
-            # Preparar las horas
+            # -----------------------------------------
+            # PREPARAR LAS FECHAS Y HORAS
+            # -----------------------------------------
 
             if "epoch" in df.columns:
 
+                df["epoch"] = pd.to_numeric(
+                    df["epoch"],
+                    errors="coerce"
+                )
+
+                df = df.dropna(subset=["epoch"])
+
                 df["hora"] = (
-                    pd.to_datetime(df["epoch"], unit="s", utc=True)
+                    pd.to_datetime(
+                        df["epoch"],
+                        unit="s",
+                        utc=True
+                    )
                     .dt.tz_convert("Europe/Madrid")
                     .dt.strftime("%H:%M")
                 )
 
                 df = df.sort_values("epoch")
 
-            else:
+            elif "fecha" in df.columns:
 
                 df["hora"] = df["fecha"].astype(str)
 
-            # Fondo y estilo de las gráficas
+            else:
 
-            st.markdown("""
-            <style>
-                .grafica-titulo {
-                    font-size: 20px;
-                    font-weight: 750;
-                    color: #e8f4ff;
-                    margin-top: 20px;
-                    margin-bottom: 5px;
-                }
+                st.warning("No se encuentran las fechas de los registros.")
+                df = pd.DataFrame()
 
-                .grafica-subtitulo {
-                    font-size: 12px;
-                    color: #8299aa;
-                    margin-bottom: 15px;
-                }
+            if not df.empty:
 
-                div[data-testid="stMetric"] {
-                    background: linear-gradient(135deg, #132b3b, #091722);
-                    border: 1px solid #24465c;
-                    border-radius: 14px;
-                    padding: 16px;
-                }
-            </style>
-            """, unsafe_allow_html=True)
+                # -----------------------------------------
+                # ESTILO DE LAS GRÁFICAS
+                # -----------------------------------------
 
-            # -----------------------------------------
-            # TEMPERATURA
-            # -----------------------------------------
+                st.markdown("""
+                <style>
+                    .grafica-titulo {
+                        font-size: 20px;
+                        font-weight: 750;
+                        color: #e8f4ff;
+                        margin-top: 20px;
+                        margin-bottom: 5px;
+                    }
 
-            st.markdown("""
-            <div class="grafica-titulo">🌡️ Temperatura</div>
-            <div class="grafica-subtitulo">
-                Evolución de la temperatura durante las últimas 24 horas
-            </div>
-            """, unsafe_allow_html=True)
+                    .grafica-subtitulo {
+                        font-size: 12px;
+                        color: #8299aa;
+                        margin-bottom: 15px;
+                    }
 
-            if "temperatura_C" in df.columns:
+                    div[data-testid="stMetric"] {
+                        background: linear-gradient(
+                            135deg,
+                            #132b3b,
+                            #091722
+                        );
+                        border: 1px solid #24465c;
+                        border-radius: 14px;
+                        padding: 16px;
+                    }
+                </style>
+                """, unsafe_allow_html=True)
 
-                df_temp = df[["hora", "temperatura_C"]].copy()
+                # -----------------------------------------
+                # ENCABEZADO DEL HISTÓRICO
+                # -----------------------------------------
 
-                df_temp["temperatura_C"] = pd.to_numeric(
-                    df_temp["temperatura_C"],
-                    errors="coerce"
+                st.markdown("""
+                <div class="grafica-titulo">
+                    📅 Evolución meteorológica de hoy
+                </div>
+                <div class="grafica-subtitulo">
+                    Registros desde las 00:00 hasta la hora actual
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.caption(
+                    f"Registros disponibles: {len(df)}"
                 )
 
-                df_temp = df_temp.dropna()
+                # -----------------------------------------
+                # GRÁFICA DE TEMPERATURA
+                # -----------------------------------------
 
-                if not df_temp.empty:
+                st.markdown("""
+                <div class="grafica-titulo">
+                    🌡️ Temperatura
+                </div>
+                <div class="grafica-subtitulo">
+                    Evolución de la temperatura durante el día de hoy
+                </div>
+                """, unsafe_allow_html=True)
 
-                    st.line_chart(
-                        df_temp.set_index("hora"),
-                        color="#FF6B6B",
-                        height=300
+                if "temperatura_C" in df.columns:
+
+                    df_temp = df[
+                        ["hora", "temperatura_C"]
+                    ].copy()
+
+                    df_temp["temperatura_C"] = pd.to_numeric(
+                        df_temp["temperatura_C"],
+                        errors="coerce"
                     )
 
-                else:
-                    st.info("No hay datos de temperatura.")
+                    df_temp = df_temp.dropna()
 
-            # -----------------------------------------
-            # LLUVIA
-            # -----------------------------------------
+                    if not df_temp.empty:
 
-            st.markdown("""
-            <div class="grafica-titulo">🌧️ Precipitación</div>
-            <div class="grafica-subtitulo">
-                Cantidad de lluvia registrada en cada observación
-            </div>
-            """, unsafe_allow_html=True)
+                        st.line_chart(
+                            df_temp.set_index("hora"),
+                            color="#FF6B6B",
+                            height=300
+                        )
 
-            if "lluvia_mm" in df.columns:
+                    else:
 
-                df_lluvia = df[["hora", "lluvia_mm"]].copy()
+                        st.info("No hay datos de temperatura.")
 
-                df_lluvia["lluvia_mm"] = pd.to_numeric(
-                    df_lluvia["lluvia_mm"],
-                    errors="coerce"
-                )
+                # -----------------------------------------
+                # GRÁFICA DE LLUVIA
+                # -----------------------------------------
 
-                df_lluvia = df_lluvia.dropna()
+                st.markdown("""
+                <div class="grafica-titulo">
+                    🌧️ Precipitación
+                </div>
+                <div class="grafica-subtitulo">
+                    Lluvia registrada durante el día de hoy
+                </div>
+                """, unsafe_allow_html=True)
 
-                if not df_lluvia.empty:
+                if "lluvia_mm" in df.columns:
 
-                    st.bar_chart(
-                        df_lluvia.set_index("hora"),
-                        color="#35C6FF",
-                        height=250
+                    df_lluvia = df[
+                        ["hora", "lluvia_mm"]
+                    ].copy()
+
+                    df_lluvia["lluvia_mm"] = pd.to_numeric(
+                        df_lluvia["lluvia_mm"],
+                        errors="coerce"
                     )
 
+                    df_lluvia = df_lluvia.dropna()
+
+                    if not df_lluvia.empty:
+
+                        st.bar_chart(
+                            df_lluvia.set_index("hora"),
+                            color="#35C6FF",
+                            height=250
+                        )
+
+                    else:
+
+                        st.info("No hay datos de lluvia.")
+
+                # -----------------------------------------
+                # RESUMEN DEL DÍA
+                # -----------------------------------------
+
+                st.markdown("""
+                <div class="grafica-titulo">
+                    📊 Resumen meteorológico de hoy
+                </div>
+                <div class="grafica-subtitulo">
+                    Valores registrados desde medianoche
+                </div>
+                """, unsafe_allow_html=True)
+
+                col1, col2, col3 = st.columns(3)
+
+                if "temperatura_C" in df.columns:
+
+                    temperaturas = pd.to_numeric(
+                        df["temperatura_C"],
+                        errors="coerce"
+                    ).dropna()
+
                 else:
-                    st.info("No hay datos de lluvia.")
 
-            # -----------------------------------------
-            # RESUMEN
-            # -----------------------------------------
+                    temperaturas = pd.Series(dtype=float)
 
-            st.markdown("""
-            <div class="grafica-titulo">📊 Resumen meteorológico</div>
-            <div class="grafica-subtitulo">
-                Valores registrados durante las últimas 24 horas
-            </div>
-            """, unsafe_allow_html=True)
+                if "lluvia_mm" in df.columns:
 
-            col1, col2, col3 = st.columns(3)
+                    lluvias = pd.to_numeric(
+                        df["lluvia_mm"],
+                        errors="coerce"
+                    ).dropna()
 
-            if "temperatura_C" in df.columns:
+                else:
 
-                temperaturas = pd.to_numeric(
-                    df["temperatura_C"],
-                    errors="coerce"
-                ).dropna()
+                    lluvias = pd.Series(dtype=float)
 
-            else:
-                temperaturas = pd.Series(dtype=float)
+                with col1:
 
-            if "lluvia_mm" in df.columns:
+                    st.metric(
+                        "🌡️ Temperatura máxima",
+                        f"{temperaturas.max():.1f} °C"
+                        if not temperaturas.empty else "--"
+                    )
 
-                lluvias = pd.to_numeric(
-                    df["lluvia_mm"],
-                    errors="coerce"
-                ).dropna()
+                with col2:
 
-            else:
-                lluvias = pd.Series(dtype=float)
+                    st.metric(
+                        "❄️ Temperatura mínima",
+                        f"{temperaturas.min():.1f} °C"
+                        if not temperaturas.empty else "--"
+                    )
 
-            with col1:
+                with col3:
 
-                st.metric(
-                    "🌡️ Temperatura máxima",
-                    f"{temperaturas.max():.1f} °C"
-                    if not temperaturas.empty else "--"
-                )
-
-            with col2:
-
-                st.metric(
-                    "❄️ Temperatura mínima",
-                    f"{temperaturas.min():.1f} °C"
-                    if not temperaturas.empty else "--"
-                )
-
-            with col3:
-
-                st.metric(
-                    "🌧️ Lluvia registrada",
-                    f"{lluvias.sum():.1f} mm"
-                    if not lluvias.empty else "--"
-                )
+                    st.metric(
+                        "🌧️ Lluvia registrada",
+                        f"{lluvias.sum():.1f} mm"
+                        if not lluvias.empty else "--"
+                    )
 
 # =====================================================
 # 10. PIE DE PÁGINA
