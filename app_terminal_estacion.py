@@ -1,7 +1,6 @@
-import plotly.express as px
+
 import requests
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -18,8 +17,9 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-URL_ESTADO = "https://servidor-estacion-meteorologica.onrender.com/api/estado"
+URL_API = "https://servidor-estacion-meteorologica.onrender.com/api/estado"
 URL_HISTORICO = "https://servidor-estacion-meteorologica.onrender.com/api/historico"
+
 
 # =====================================================
 # 2. ESTILO VISUAL
@@ -40,10 +40,6 @@ st.markdown("""
         padding-top: 1rem;
         padding-bottom: 1rem;
         max-width: 1500px;
-    }
-
-    h1, h2, h3, p {
-        color: white;
     }
 
     .cabecera {
@@ -105,6 +101,20 @@ st.markdown("""
     .radiacion { color: #ffab40; }
     .direccion { color: #69f0ae; }
 
+    .grafica-titulo {
+        font-size: 20px;
+        font-weight: 750;
+        color: #e8f4ff;
+        margin-top: 22px;
+        margin-bottom: 5px;
+    }
+
+    .grafica-subtitulo {
+        font-size: 12px;
+        color: #8299aa;
+        margin-bottom: 15px;
+    }
+
     .pie {
         text-align: center;
         color: #718087;
@@ -112,11 +122,18 @@ st.markdown("""
         padding: 15px 0 5px 0;
     }
 
+    .estado {
+        text-align: center;
+        color: #9eabb0;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
     div[data-testid="stMetric"] {
-        background: #111c21;
-        border: 1px solid #26383e;
-        padding: 12px;
-        border-radius: 12px;
+        background: linear-gradient(135deg, #132b3b, #091722);
+        border: 1px solid #24465c;
+        border-radius: 14px;
+        padding: 16px;
     }
 
     div[data-testid="stMetricLabel"] {
@@ -135,26 +152,19 @@ st.markdown("""
         color: #ffcc80;
         margin: 10px 0;
     }
-
-    .estado {
-        text-align: center;
-        color: #9eabb0;
-        font-size: 12px;
-        margin-top: 5px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 
 # =====================================================
-# 3. FUNCIONES PARA CONSULTAR LOS DATOS
+# 3. CONSULTA DE DATOS ACTUALES
 # =====================================================
 
 def obtener_datos_actuales():
 
     try:
         respuesta = requests.get(
-            URL_ESTADO,
+            URL_API,
             timeout=20
         )
 
@@ -166,9 +176,12 @@ def obtener_datos_actuales():
         return None
 
 
-# El histórico queda guardado en caché durante 5 minutos.
-# Las excepciones no se guardan en caché: se podrá reintentar
-# la consulta en la siguiente actualización.
+# =====================================================
+# 4. CONSULTA DEL HISTÓRICO
+# =====================================================
+
+# Los datos históricos se guardan durante 5 minutos.
+# Esto evita consultar continuamente la API.
 
 @st.cache_data(ttl=300, show_spinner=False)
 def consultar_historico():
@@ -193,7 +206,7 @@ def obtener_historico():
 
 
 # =====================================================
-# 4. FUNCIONES AUXILIARES
+# 5. FUNCIONES AUXILIARES
 # =====================================================
 
 def formato(valor, decimales=1):
@@ -203,6 +216,7 @@ def formato(valor, decimales=1):
 
     try:
         return f"{float(valor):.{decimales}f}"
+
     except (ValueError, TypeError):
         return "--"
 
@@ -212,10 +226,14 @@ def tarjeta(titulo, valor, unidad, clase):
     st.markdown(
         f"""
         <div class="tarjeta">
-            <div class="tarjeta-titulo">{escape(titulo)}</div>
+            <div class="tarjeta-titulo">
+                {escape(titulo)}
+            </div>
             <div class="tarjeta-valor {clase}">
                 {escape(str(valor))}
-                <span class="tarjeta-unidad">{escape(unidad)}</span>
+                <span class="tarjeta-unidad">
+                    {escape(unidad)}
+                </span>
             </div>
         </div>
         """,
@@ -230,6 +248,7 @@ def direccion_viento(grados):
 
     try:
         grados = float(grados)
+
     except (ValueError, TypeError):
         return "--"
 
@@ -246,12 +265,14 @@ def direccion_viento(grados):
 
 
 # =====================================================
-# 5. CABECERA
+# 6. CABECERA
 # =====================================================
 
 st.markdown("""
 <div class="cabecera">
-    <div class="titulo">⛅ ESTACIÓN METEOROLÓGICA</div>
+    <div class="titulo">
+        ⛅ ESTACIÓN METEOROLÓGICA
+    </div>
     <div class="subtitulo">
         IES VIRGEN DE GRACIA · OLIVA DE LA FRONTERA
     </div>
@@ -260,24 +281,24 @@ st.markdown("""
 
 
 # =====================================================
-# 6. CONSULTA DE LOS DATOS
+# 7. CONSULTAR DATOS ACTUALES
 # =====================================================
 
 datos = obtener_datos_actuales()
 
 
 # =====================================================
-# 7. PESTAÑAS
+# 8. PESTAÑAS PRINCIPALES
 # =====================================================
 
 pestana_actual, pestana_historico = st.tabs([
     "🌤️ DATOS ACTUALES",
-    "📈 EVOLUCIÓN 24 HORAS"
+    "📈 EVOLUCIÓN DE HOY"
 ])
 
 
 # =====================================================
-# 8. PESTAÑA DE DATOS ACTUALES
+# 9. PESTAÑA DE DATOS ACTUALES
 # =====================================================
 
 with pestana_actual:
@@ -289,7 +310,7 @@ with pestana_actual:
         )
 
         st.info(
-            "Comprueba que el servidor está funcionando e inténtalo de nuevo."
+            "Comprueba la conexión con el servidor e inténtalo de nuevo."
         )
 
     elif "error" in datos:
@@ -379,38 +400,38 @@ with pestana_actual:
                 "direccion"
             )
 
-        # Aviso educativo
+        # Aviso de temperatura
 
         if temperatura is not None:
 
             try:
+
                 if float(temperatura) > 25:
 
                     st.markdown("""
                     <div class="aviso">
-                        ☀️ <b>AVISO:</b> La temperatura supera los 25 °C.
+                        ☀️ <b>AVISO:</b>
+                        La temperatura supera los 25 °C.
                     </div>
                     """, unsafe_allow_html=True)
 
             except (ValueError, TypeError):
                 pass
 
-        # Fecha de los datos
+        # Fecha de la última observación
 
         fecha = datos.get("fecha")
 
         if fecha:
+
             st.markdown(
                 f'<div class="estado">Última observación: {escape(str(fecha))}</div>',
                 unsafe_allow_html=True
             )
 
 
-
-
-
 # =====================================================
-# 9. PESTAÑA DE EVOLUCIÓN DEL DÍA ACTUAL
+# 10. PESTAÑA DE EVOLUCIÓN DEL DÍA ACTUAL
 # =====================================================
 
 with pestana_historico:
@@ -419,7 +440,9 @@ with pestana_historico:
 
     if historico is None:
 
-        st.warning("No se ha podido consultar el histórico.")
+        st.warning(
+            "No se ha podido consultar el histórico."
+        )
 
     elif "error" in historico:
 
@@ -431,258 +454,227 @@ with pestana_historico:
 
         if not registros:
 
-            st.info("Todavía no hay registros disponibles para hoy.")
+            st.info(
+                "Todavía no hay registros disponibles para hoy."
+            )
 
         else:
 
             df = pd.DataFrame(registros)
 
-            # -----------------------------------------
-            # FILTRAR DESDE MEDIANOCHE HASTA AHORA
-            # -----------------------------------------
+            if "epoch" not in df.columns:
 
-            ahora = pd.Timestamp.now(tz="Europe/Madrid")
-            inicio_dia = ahora.normalize()
-
-            df["epoch"] = pd.to_numeric(
-                df["epoch"],
-                errors="coerce"
-            )
-
-            df = df.dropna(subset=["epoch"])
-
-            df["fecha_hora"] = pd.to_datetime(
-                df["epoch"],
-                unit="s",
-                utc=True
-            ).dt.tz_convert("Europe/Madrid")
-
-            df = df[
-                (df["fecha_hora"] >= inicio_dia) &
-                (df["fecha_hora"] <= ahora)
-            ].copy()
-
-            df = df.sort_values("fecha_hora")
-
-            if df.empty:
-
-                st.info("Todavía no hay observaciones para mostrar.")
+                st.warning(
+                    "Los registros históricos no contienen la hora de observación."
+                )
 
             else:
 
                 # -----------------------------------------
-                # ESTILO
+                # FILTRAR DESDE LAS 00:00 HASTA AHORA
                 # -----------------------------------------
 
-                st.markdown("""
-                <style>
-                    .grafica-titulo {
-                        font-size: 20px;
-                        font-weight: 750;
-                        color: #e8f4ff;
-                        margin-top: 20px;
-                        margin-bottom: 5px;
-                    }
-
-                    .grafica-subtitulo {
-                        font-size: 12px;
-                        color: #8299aa;
-                        margin-bottom: 15px;
-                    }
-
-                    div[data-testid="stMetric"] {
-                        background: linear-gradient(
-                            135deg,
-                            #132b3b,
-                            #091722
-                        );
-                        border: 1px solid #24465c;
-                        border-radius: 14px;
-                        padding: 16px;
-                    }
-                </style>
-                """, unsafe_allow_html=True)
-
-                st.markdown("""
-                <div class="grafica-titulo">
-                    📅 Evolución meteorológica de hoy
-                </div>
-                <div class="grafica-subtitulo">
-                    Desde las 00:00 hasta la hora actual
-                </div>
-                """, unsafe_allow_html=True)
-
-                st.caption(
-                    f"Registros disponibles: {len(df)} · "
-                    f"Última hora de consulta: {ahora.strftime('%H:%M')}"
+                ahora = pd.Timestamp.now(
+                    tz="Europe/Madrid"
                 )
 
-                # Configuración común de las gráficas
-                configuracion = {
-                    "paper_bgcolor": "#030607",
-                    "plot_bgcolor": "#0b1720",
-                    "font": {"color": "#dceaf2"},
-                    "margin": {"l": 35, "r": 20, "t": 25, "b": 40},
-                    "xaxis": {
-                        "title": "",
-                        "range": [inicio_dia, ahora],
-                        "showgrid": False,
-                        "color": "#9eb3c1"
-                    },
-                    "yaxis": {
-                        "gridcolor": "#203542",
-                        "zerolinecolor": "#203542",
-                        "color": "#9eb3c1"
-                    },
-                    "hovermode": "x unified"
-                }
+                inicio_dia = ahora.normalize()
 
-                # -----------------------------------------
-                # TEMPERATURA
-                # -----------------------------------------
-
-                st.markdown("""
-                <div class="grafica-titulo">🌡️ Temperatura</div>
-                <div class="grafica-subtitulo">
-                    Evolución de la temperatura durante el día
-                </div>
-                """, unsafe_allow_html=True)
-
-                if "temperatura_C" in df.columns:
-
-                    df_temp = df[
-                        ["fecha_hora", "temperatura_C"]
-                    ].copy()
-
-                    df_temp["temperatura_C"] = pd.to_numeric(
-                        df_temp["temperatura_C"],
-                        errors="coerce"
-                    )
-
-                    df_temp = df_temp.dropna()
-
-                    if not df_temp.empty:
-
-                        fig_temp = px.line(
-                            df_temp,
-                            x="fecha_hora",
-                            y="temperatura_C",
-                            markers=True
-                        )
-
-                        fig_temp.update_traces(
-                            line=dict(color="#FF6B6B", width=3),
-                            marker=dict(size=5, color="#FF6B6B"),
-                            name="Temperatura"
-                        )
-
-                        fig_temp.update_layout(
-                            **configuracion,
-                            yaxis_title="Temperatura (°C)"
-                        )
-
-                        st.plotly_chart(
-                            fig_temp,
-                            use_container_width=True,
-                            config={"displayModeBar": False}
-                        )
-
-                # -----------------------------------------
-                # LLUVIA
-                # -----------------------------------------
-
-                st.markdown("""
-                <div class="grafica-titulo">🌧️ Precipitación</div>
-                <div class="grafica-subtitulo">
-                    Lluvia registrada durante el día
-                </div>
-                """, unsafe_allow_html=True)
-
-                if "lluvia_mm" in df.columns:
-
-                    df_lluvia = df[
-                        ["fecha_hora", "lluvia_mm"]
-                    ].copy()
-
-                    df_lluvia["lluvia_mm"] = pd.to_numeric(
-                        df_lluvia["lluvia_mm"],
-                        errors="coerce"
-                    )
-
-                    df_lluvia = df_lluvia.dropna()
-
-                    if not df_lluvia.empty:
-
-                        fig_lluvia = px.bar(
-                            df_lluvia,
-                            x="fecha_hora",
-                            y="lluvia_mm"
-                        )
-
-                        fig_lluvia.update_traces(
-                            marker_color="#35C6FF",
-                            name="Lluvia"
-                        )
-
-                        fig_lluvia.update_layout(
-                            **configuracion,
-                            yaxis_title="Lluvia (mm)"
-                        )
-
-                        st.plotly_chart(
-                            fig_lluvia,
-                            use_container_width=True,
-                            config={"displayModeBar": False}
-                        )
-
-                # -----------------------------------------
-                # RESUMEN DEL DÍA
-                # -----------------------------------------
-
-                st.markdown("""
-                <div class="grafica-titulo">
-                    📊 Resumen meteorológico de hoy
-                </div>
-                <div class="grafica-subtitulo">
-                    Valores registrados desde medianoche
-                </div>
-                """, unsafe_allow_html=True)
-
-                temperaturas = pd.to_numeric(
-                    df["temperatura_C"],
+                df["epoch"] = pd.to_numeric(
+                    df["epoch"],
                     errors="coerce"
-                ).dropna() if "temperatura_C" in df.columns else pd.Series(dtype=float)
+                )
 
-                lluvias = pd.to_numeric(
-                    df["lluvia_mm"],
-                    errors="coerce"
-                ).dropna() if "lluvia_mm" in df.columns else pd.Series(dtype=float)
+                df = df.dropna(subset=["epoch"]).copy()
 
-                col1, col2, col3 = st.columns(3)
+                df["fecha_hora"] = pd.to_datetime(
+                    df["epoch"],
+                    unit="s",
+                    utc=True
+                ).dt.tz_convert("Europe/Madrid")
 
-                with col1:
-                    st.metric(
-                        "🌡️ Temperatura máxima",
-                        f"{temperaturas.max():.1f} °C"
-                        if not temperaturas.empty else "--"
+                # Eliminar registros de otros días
+                # y cualquier observación futura.
+
+                df = df[
+                    (df["fecha_hora"] >= inicio_dia) &
+                    (df["fecha_hora"] <= ahora)
+                ].copy()
+
+                df = df.sort_values("fecha_hora")
+
+                if df.empty:
+
+                    st.info(
+                        "Todavía no hay observaciones para mostrar."
                     )
 
-                with col2:
-                    st.metric(
-                        "❄️ Temperatura mínima",
-                        f"{temperaturas.min():.1f} °C"
-                        if not temperaturas.empty else "--"
+                else:
+
+                    # -----------------------------------------
+                    # ENCABEZADO
+                    # -----------------------------------------
+
+                    st.markdown("""
+                    <div class="grafica-titulo">
+                        📅 Evolución meteorológica de hoy
+                    </div>
+                    <div class="grafica-subtitulo">
+                        Registros desde las 00:00 hasta la hora actual
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    st.caption(
+                        f"Registros disponibles: {len(df)} · "
+                        f"Consulta realizada a las {ahora.strftime('%H:%M')}"
                     )
 
-                with col3:
-                    st.metric(
-                        "🌧️ Lluvia registrada",
-                        f"{lluvias.sum():.1f} mm"
-                        if not lluvias.empty else "--"
-                    )
+                    # -----------------------------------------
+                    # GRÁFICA DE TEMPERATURA
+                    # -----------------------------------------
+
+                    st.markdown("""
+                    <div class="grafica-titulo">
+                        🌡️ Temperatura
+                    </div>
+                    <div class="grafica-subtitulo">
+                        Evolución de la temperatura durante el día
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    if "temperatura_C" in df.columns:
+
+                        df_temp = df[
+                            ["fecha_hora", "temperatura_C"]
+                        ].copy()
+
+                        df_temp["temperatura_C"] = pd.to_numeric(
+                            df_temp["temperatura_C"],
+                            errors="coerce"
+                        )
+
+                        df_temp = df_temp.dropna()
+
+                        if not df_temp.empty:
+
+                            st.line_chart(
+                                df_temp.set_index("fecha_hora"),
+                                y="temperatura_C",
+                                color="#FF6B6B",
+                                height=300
+                            )
+
+                        else:
+
+                            st.info(
+                                "No hay datos de temperatura disponibles."
+                            )
+
+                    # -----------------------------------------
+                    # GRÁFICA DE LLUVIA
+                    # -----------------------------------------
+
+                    st.markdown("""
+                    <div class="grafica-titulo">
+                        🌧️ Precipitación
+                    </div>
+                    <div class="grafica-subtitulo">
+                        Lluvia registrada durante el día
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    if "lluvia_mm" in df.columns:
+
+                        df_lluvia = df[
+                            ["fecha_hora", "lluvia_mm"]
+                        ].copy()
+
+                        df_lluvia["lluvia_mm"] = pd.to_numeric(
+                            df_lluvia["lluvia_mm"],
+                            errors="coerce"
+                        )
+
+                        df_lluvia = df_lluvia.dropna()
+
+                        if not df_lluvia.empty:
+
+                            st.bar_chart(
+                                df_lluvia.set_index("fecha_hora"),
+                                y="lluvia_mm",
+                                color="#35C6FF",
+                                height=250
+                            )
+
+                        else:
+
+                            st.info(
+                                "No hay datos de lluvia disponibles."
+                            )
+
+                    # -----------------------------------------
+                    # RESUMEN DEL DÍA
+                    # -----------------------------------------
+
+                    st.markdown("""
+                    <div class="grafica-titulo">
+                        📊 Resumen meteorológico de hoy
+                    </div>
+                    <div class="grafica-subtitulo">
+                        Valores registrados desde medianoche
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    if "temperatura_C" in df.columns:
+
+                        temperaturas = pd.to_numeric(
+                            df["temperatura_C"],
+                            errors="coerce"
+                        ).dropna()
+
+                    else:
+
+                        temperaturas = pd.Series(dtype=float)
+
+                    if "lluvia_mm" in df.columns:
+
+                        lluvias = pd.to_numeric(
+                            df["lluvia_mm"],
+                            errors="coerce"
+                        ).dropna()
+
+                    else:
+
+                        lluvias = pd.Series(dtype=float)
+
+                    col1, col2, col3 = st.columns(3)
+
+                    with col1:
+
+                        st.metric(
+                            "🌡️ Temperatura máxima",
+                            f"{temperaturas.max():.1f} °C"
+                            if not temperaturas.empty else "--"
+                        )
+
+                    with col2:
+
+                        st.metric(
+                            "❄️ Temperatura mínima",
+                            f"{temperaturas.min():.1f} °C"
+                            if not temperaturas.empty else "--"
+                        )
+
+                    with col3:
+
+                        st.metric(
+                            "🌧️ Lluvia registrada",
+                            f"{lluvias.sum():.1f} mm"
+                            if not lluvias.empty else "--"
+                        )
+
 
 # =====================================================
-# 10. PIE DE PÁGINA
+# 11. PIE DE PÁGINA
 # =====================================================
 
 st.markdown("""
@@ -691,19 +683,3 @@ st.markdown("""
     · IES Virgen de Gracia
 </div>
 """, unsafe_allow_html=True)
-
-
-# =====================================================
-# 11. ACTUALIZACIÓN AUTOMÁTICA CADA 60 SEGUNDOS
-# =====================================================
-
-components.html(
-    """
-    <script>
-        setTimeout(function() {
-            window.parent.location.reload();
-        }, 60000);
-    </script>
-    """,
-    height=0
-)
