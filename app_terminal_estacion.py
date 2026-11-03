@@ -1,7 +1,7 @@
 
 import requests
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
+import streamlit.components.v1 as components
 
 # ==========================================
 # 1. CONFIGURACIÓN
@@ -17,12 +17,18 @@ st.set_page_config(
 URL_API = "https://estacion-meteorologica-profe.onrender.com/api/estado"
 
 # ==========================================
-# 2. ACTUALIZACIÓN AUTOMÁTICA
+# 2. ACTUALIZACIÓN AUTOMÁTICA CADA 60 SEGUNDOS
 # ==========================================
 
-st_autorefresh(
-    interval=60 * 1000,
-    key="actualizacion_meteorologica"
+components.html(
+    """
+    <script>
+        setTimeout(function() {
+            window.parent.location.reload();
+        }, 60000);
+    </script>
+    """,
+    height=0
 )
 
 # ==========================================
@@ -384,4 +390,3 @@ st.markdown("""
     Proyecto educativo de Tecnología e Ingeniería · IES Virgen de Gracia
 </div>
 """, unsafe_allow_html=True)
-
