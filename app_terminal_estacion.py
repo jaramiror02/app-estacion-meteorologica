@@ -459,7 +459,19 @@ with pestana_historico:
                     .dt.strftime("%H:%M")
                 )
 
-                df = df.sort_values("epoch")
+                # Hora actual en España
+                ahora = pd.Timestamp.now(tz="Europe/Madrid")
+
+                # Inicio del día actual
+                inicio_dia = ahora.normalize()
+
+                # Convertir los registros a hora española
+                fechas = pd.to_datetime(
+                df["epoch"],
+                unit="s",
+                utc=True
+                ).dt.tz_convert("Europe/Madrid")
+
 
             elif "fecha" in df.columns:
 
