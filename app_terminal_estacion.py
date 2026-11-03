@@ -1,6 +1,7 @@
 
 import requests
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 
 # ==========================================
 # 1. CONFIGURACIÓN
@@ -16,7 +17,16 @@ st.set_page_config(
 URL_API = "https://estacion-meteorologica-profe.onrender.com/api/estado"
 
 # ==========================================
-# 2. DISEÑO VISUAL
+# 2. ACTUALIZACIÓN AUTOMÁTICA
+# ==========================================
+
+st_autorefresh(
+    interval=60 * 1000,
+    key="actualizacion_meteorologica"
+)
+
+# ==========================================
+# 3. DISEÑO VISUAL
 # ==========================================
 
 st.markdown("""
@@ -193,6 +203,7 @@ header[data-testid="stHeader"] {
 }
 
 @media (max-height: 800px) {
+
     .weather-card {
         height: 105px;
         padding: 6px;
@@ -220,7 +231,7 @@ header[data-testid="stHeader"] {
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. CABECERA
+# 4. CABECERA
 # ==========================================
 
 st.markdown("""
@@ -236,15 +247,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. CONEXIÓN CON RENDER
+# 5. CONEXIÓN CON RENDER
 # ==========================================
 
-@st.cache_data(ttl=30)
 def obtener_datos():
+
     try:
-        respuesta = requests.get(URL_API, timeout=15)
+        respuesta = requests.get(
+            URL_API,
+            timeout=15
+        )
+
         respuesta.raise_for_status()
+
         return respuesta.json()
+
     except (requests.RequestException, ValueError):
         return None
 
@@ -252,7 +269,7 @@ def obtener_datos():
 datos = obtener_datos()
 
 # ==========================================
-# 5. FUNCIÓN PARA CREAR TARJETAS
+# 6. FUNCIÓN PARA CREAR TARJETAS
 # ==========================================
 
 def tarjeta(columna, icono, titulo, valor, unidad, color):
@@ -272,7 +289,7 @@ def tarjeta(columna, icono, titulo, valor, unidad, color):
 
 
 # ==========================================
-# 6. MOSTRAR DATOS
+# 7. MOSTRAR DATOS
 # ==========================================
 
 if datos:
@@ -287,44 +304,62 @@ if datos:
 
     c1, c2, c3 = st.columns(3)
 
-    tarjeta(c1, "🌡️", "Temperatura",
-            datos.get("temperatura_C"), "°C", "red")
+    tarjeta(
+        c1, "🌡️", "Temperatura",
+        datos.get("temperatura_C"), "°C", "red"
+    )
 
-    tarjeta(c2, "💧", "Humedad",
-            datos.get("humedad_pct"), "%", "blue")
+    tarjeta(
+        c2, "💧", "Humedad",
+        datos.get("humedad_pct"), "%", "blue"
+    )
 
-    tarjeta(c3, "💨", "Viento",
-            datos.get("viento_kmh"), "km/h", "cyan")
+    tarjeta(
+        c3, "💨", "Viento",
+        datos.get("viento_kmh"), "km/h", "cyan"
+    )
 
     # FILA 2
 
     c4, c5, c6 = st.columns(3)
 
-    tarjeta(c4, "🌪️", "Ráfaga",
-            datos.get("rafaga_kmh"), "km/h", "purple")
+    tarjeta(
+        c4, "🌪️", "Ráfaga",
+        datos.get("rafaga_kmh"), "km/h", "purple"
+    )
 
-    tarjeta(c5, "🌧️", "Lluvia",
-            datos.get("lluvia_acumulada_mm"), "mm", "blue")
+    tarjeta(
+        c5, "🌧️", "Lluvia",
+        datos.get("lluvia_acumulada_mm"), "mm", "blue"
+    )
 
-    tarjeta(c6, "☀️", "Índice UV",
-            datos.get("indice_uv"), "", "yellow")
+    tarjeta(
+        c6, "☀️", "Índice UV",
+        datos.get("indice_uv"), "", "yellow"
+    )
 
     # FILA 3
 
     c7, c8 = st.columns(2)
 
-    tarjeta(c7, "🔆", "Radiación solar",
-            datos.get("radiacion_solar_W_m2"), "W/m²", "green")
+    tarjeta(
+        c7, "🔆", "Radiación solar",
+        datos.get("radiacion_solar_W_m2"), "W/m²", "green"
+    )
 
-    tarjeta(c8, "🧭", "Dirección del viento",
-            datos.get("direccion_viento_grados"), "°", "turquoise")
+    tarjeta(
+        c8, "🧭", "Dirección del viento",
+        datos.get("direccion_viento_grados"), "°", "turquoise"
+    )
 
     # AVISOS
 
     try:
+
         temperatura = float(datos.get("temperatura_C"))
 
         if temperatura > 25:
+
             st.markdown("""
             <div class="aviso">
                 ⚠️ ¡Aviso educativo: Temperatura superior a 25 °C!
@@ -336,10 +371,12 @@ if datos:
 
 else:
 
-    st.error("⚠️ No se pudo conectar con el servidor meteorológico.")
+    st.error(
+        "⚠️ No se pudo conectar con el servidor meteorológico."
+    )
 
 # ==========================================
-# 7. PIE DE PÁGINA
+# 8. PIE DE PÁGINA
 # ==========================================
 
 st.markdown("""
