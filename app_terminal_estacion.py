@@ -18,8 +18,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-URL_ESTADO = "https://estacion-meteorologica-profe.onrender.com/api/estado"
-URL_HISTORICO = "https://estacion-meteorologica-profe.onrender.com/api/historico"
+URL_ESTADO = "https://servidor-estacion-meteorologica.onrender.com/api/estado"
+URL_HISTORICO = "https://servidor-estacion-meteorologica.onrender.com/api/historico"
 
 # =====================================================
 # 2. ESTILO VISUAL
