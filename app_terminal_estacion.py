@@ -223,6 +223,15 @@ def formato(valor, decimales=1):
 
 def tarjeta(titulo, valor, unidad, clase):
 
+    unidad_html = ""
+
+    if unidad:
+        unidad_html = (
+            f'<span class="tarjeta-unidad">'
+            f'{escape(unidad)}'
+            f'</span>'
+        )
+
     st.markdown(
         f"""
         <div class="tarjeta">
@@ -230,16 +239,12 @@ def tarjeta(titulo, valor, unidad, clase):
                 {escape(titulo)}
             </div>
             <div class="tarjeta-valor {clase}">
-                {escape(str(valor))}
-                <span class="tarjeta-unidad">
-                    {escape(unidad)}
-                </span>
+                {escape(str(valor))}{unidad_html}
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
-
 
 def direccion_viento(grados):
 
