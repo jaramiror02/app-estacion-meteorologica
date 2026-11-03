@@ -2,8 +2,6 @@
 import requests
 import streamlit as st
 import pandas as pd
-from datetime import datetime
-from zoneinfo import ZoneInfo
 from html import escape
 
 # =====================================================
@@ -180,8 +178,7 @@ def obtener_datos_actuales():
 # 4. CONSULTA DEL HISTÓRICO
 # =====================================================
 
-# Los datos históricos se guardan durante 5 minutos.
-# Esto evita consultar continuamente la API.
+# El histórico se guarda en caché durante 5 minutos.
 
 @st.cache_data(ttl=300, show_spinner=False)
 def consultar_historico():
@@ -246,6 +243,7 @@ def tarjeta(titulo, valor, unidad, clase):
         unsafe_allow_html=True
     )
 
+
 def direccion_viento(grados):
 
     if grados is None:
@@ -286,27 +284,15 @@ st.markdown("""
 
 
 # =====================================================
-# 7. CONSULTAR DATOS ACTUALES
+# 7. MOSTRAR DATOS ACTUALES
 # =====================================================
 
-datos = obtener_datos_actuales()
+# Esta función se actualiza automáticamente cada minuto.
 
+@st.fragment(run_every="60s")
+def mostrar_datos_actuales():
 
-# =====================================================
-# 8. PESTAÑAS PRINCIPALES
-# =====================================================
-
-pestana_actual, pestana_historico = st.tabs([
-    "🌤️ DATOS ACTUALES",
-    "📈 EVOLUCIÓN DE HOY"
-])
-
-
-# =====================================================
-# 9. PESTAÑA DE DATOS ACTUALES
-# =====================================================
-
-with pestana_actual:
+    datos = obtener_datos_actuales()
 
     if datos is None:
 
@@ -436,10 +422,13 @@ with pestana_actual:
 
 
 # =====================================================
-# 10. PESTAÑA DE EVOLUCIÓN DEL DÍA ACTUAL
+# 8. MOSTRAR EVOLUCIÓN DEL DÍA
 # =====================================================
 
-with pestana_historico:
+# Esta función se actualiza cada 5 minutos.
+
+@st.fragment(run_every="300s")
+def mostrar_historico():
 
     historico = obtener_historico()
 
@@ -679,7 +668,35 @@ with pestana_historico:
 
 
 # =====================================================
-# 11. PIE DE PÁGINA
+# 9. PESTAÑAS PRINCIPALES
+# =====================================================
+
+pestana_actual, pestana_historico = st.tabs([
+    "🌤️ DATOS ACTUALES",
+    "📈 EVOLUCIÓN DE HOY"
+])
+
+
+# =====================================================
+# 10. PESTAÑA DE DATOS ACTUALES
+# =====================================================
+
+with pestana_actual:
+
+    mostrar_datos_actuales()
+
+
+# =====================================================
+# 11. PESTAÑA DE EVOLUCIÓN DEL DÍA
+# =====================================================
+
+with pestana_historico:
+
+    mostrar_historico()
+
+
+# =====================================================
+# 12. PIE DE PÁGINA
 # =====================================================
 
 st.markdown("""
