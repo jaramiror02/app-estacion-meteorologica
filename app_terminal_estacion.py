@@ -300,9 +300,14 @@ def tarjeta(columna, icono, titulo, valor, unidad, color):
 
 if datos:
 
+    # FECHA Y HORA DE LOS ÚLTIMOS DATOS
+
+    fecha_actualizacion = datos.get("fecha", "N/D")
+
     st.markdown(
-        f'<div class="actualizacion">📅 Última actualización: '
-        f'{datos.get("fecha", "N/D")}</div>',
+        f'<div class="actualizacion">'
+        f'🕒 Últimos datos registrados: {fecha_actualizacion}'
+        f'</div>',
         unsafe_allow_html=True
     )
 
