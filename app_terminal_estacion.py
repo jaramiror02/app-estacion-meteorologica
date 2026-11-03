@@ -2,6 +2,7 @@
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
+import pandas as pd
 
 # ==========================================
 # 1. CONFIGURACIÓN
@@ -15,6 +16,7 @@ st.set_page_config(
 )
 
 URL_API = "https://estacion-meteorologica-profe.onrender.com/api/estado"
+URL_HISTORICO = "https://estacion-meteorologica-profe.onrender.com/api/historico"
 
 # ==========================================
 # 2. ACTUALIZACIÓN AUTOMÁTICA CADA 60 SEGUNDOS
@@ -37,8 +39,6 @@ components.html(
 
 st.markdown("""
 <style>
-
-/* Fondo general */
 
 .stApp {
     background: #030607;
@@ -94,6 +94,22 @@ header[data-testid="stHeader"] {
     color: #b9d4e9;
     font-size: 0.9rem;
     margin: 8px 0 12px 0;
+}
+
+/* Pestañas */
+
+button[data-baseweb="tab"] {
+    color: #b9c8df;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #00ff80;
+}
+
+div[data-baseweb="tab-highlight"] {
+    background-color: #00ff80;
 }
 
 /* Tarjetas */
@@ -199,7 +215,14 @@ header[data-testid="stHeader"] {
     font-size: 0.95rem;
 }
 
-/* Pie */
+/* Gráficas */
+
+.grafica-titulo {
+    color: #f4f8ff;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 12px 0 5px 0;
+}
 
 .pie {
     text-align: center;
@@ -253,7 +276,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 5. CONEXIÓN CON RENDER
+# 5. CONEXIÓN CON EL SERVIDOR
 # ==========================================
 
 def obtener_datos():
@@ -265,7 +288,21 @@ def obtener_datos():
         )
 
         respuesta.raise_for_status()
+        return respuesta.json()
 
+    except (requests.RequestException, ValueError):
+        return None
+
+
+def obtener_historico():
+
+    try:
+        respuesta = requests.get(
+            URL_HISTORICO,
+            timeout=20
+        )
+
+        respuesta.raise_for_status()
         return respuesta.json()
 
     except (requests.RequestException, ValueError):
@@ -273,6 +310,7 @@ def obtener_datos():
 
 
 datos = obtener_datos()
+historico = obtener_historico()
 
 # ==========================================
 # 6. FUNCIÓN PARA CREAR TARJETAS
@@ -295,96 +333,269 @@ def tarjeta(columna, icono, titulo, valor, unidad, color):
 
 
 # ==========================================
-# 7. MOSTRAR DATOS
+# 7. CREACIÓN DE LAS DOS PESTAÑAS
 # ==========================================
 
-if datos:
+pestana_actual, pestana_historico = st.tabs([
+    "🌤️ DATOS ACTUALES",
+    "📈 EVOLUCIÓN 24 HORAS"
+])
 
-    # FECHA Y HORA DE LOS ÚLTIMOS DATOS
 
-    fecha_actualizacion = datos.get("fecha", "N/D")
+# ==========================================
+# PESTAÑA 1. DATOS ACTUALES
+# ==========================================
+
+with pestana_actual:
+
+    if datos and "error" not in datos:
+
+        fecha_actualizacion = datos.get("fecha", "N/D")
+
+        st.markdown(
+            f'<div class="actualizacion">'
+            f'🕒 Últimos datos registrados: {fecha_actualizacion}'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+        # FILA 1
+
+        c1, c2, c3 = st.columns(3)
+
+        tarjeta(
+            c1, "🌡️", "Temperatura",
+            datos.get("temperatura_C"), "°C", "red"
+        )
+
+        tarjeta(
+            c2, "💧", "Humedad",
+            datos.get("humedad_pct"), "%", "blue"
+        )
+
+        tarjeta(
+            c3, "💨", "Viento",
+            datos.get("viento_kmh"), "km/h", "cyan"
+        )
+
+        # FILA 2
+
+        c4, c5, c6 = st.columns(3)
+
+        tarjeta(
+            c4, "🌪️", "Ráfaga",
+            datos.get("rafaga_kmh"), "km/h", "purple"
+        )
+
+        tarjeta(
+            c5, "🌧️", "Lluvia",
+            datos.get("lluvia_acumulada_mm"), "mm", "blue"
+        )
+
+        tarjeta(
+            c6, "☀️", "Índice UV",
+            datos.get("indice_uv"), "", "yellow"
+        )
+
+        # FILA 3
+
+        c7, c8 = st.columns(2)
+
+        tarjeta(
+            c7, "🔆", "Radiación solar",
+            datos.get("radiacion_solar_W_m2"), "W/m²", "green"
+        )
+
+        tarjeta(
+            c8, "🧭", "Dirección del viento",
+            datos.get("direccion_viento_grados"), "°", "turquoise"
+        )
+
+        # AVISOS
+
+        try:
+            temperatura = float(datos.get("temperatura_C"))
+
+            if temperatura > 25:
+                st.markdown("""
+                <div class="aviso">
+                    ⚠️ ¡Aviso educativo: Temperatura superior a 25 °C!
+                </div>
+                """, unsafe_allow_html=True)
+
+        except (ValueError, TypeError):
+            pass
+
+    else:
+
+        st.error(
+            "⚠️ No se pudo conectar con el servidor meteorológico."
+        )
+
+
+# ==========================================
+# PESTAÑA 2. EVOLUCIÓN DE LAS ÚLTIMAS 24 HORAS
+# ==========================================
+
+with pestana_historico:
 
     st.markdown(
-        f'<div class="actualizacion">'
-        f'🕒 Últimos datos registrados: {fecha_actualizacion}'
-        f'</div>',
+        '<div class="actualizacion">'
+        '📊 Evolución meteorológica de las últimas 24 horas'
+        '</div>',
         unsafe_allow_html=True
     )
 
-    # FILA 1
+    if historico and "error" not in historico:
 
-    c1, c2, c3 = st.columns(3)
+        registros = historico.get("registros", [])
 
-    tarjeta(
-        c1, "🌡️", "Temperatura",
-        datos.get("temperatura_C"), "°C", "red"
-    )
+        if registros:
 
-    tarjeta(
-        c2, "💧", "Humedad",
-        datos.get("humedad_pct"), "%", "blue"
-    )
+            df = pd.DataFrame(registros)
 
-    tarjeta(
-        c3, "💨", "Viento",
-        datos.get("viento_kmh"), "km/h", "cyan"
-    )
+            # Preparar las fechas para las gráficas.
 
-    # FILA 2
+            if "fecha" in df.columns:
+                df["fecha_grafica"] = pd.to_datetime(
+                    df["fecha"],
+                    errors="coerce"
+                )
 
-    c4, c5, c6 = st.columns(3)
+            if "epoch" in df.columns:
 
-    tarjeta(
-        c4, "🌪️", "Ráfaga",
-        datos.get("rafaga_kmh"), "km/h", "purple"
-    )
+                fechas_epoch = pd.to_datetime(
+                    df["epoch"],
+                    unit="s",
+                    utc=True
+                ).dt.tz_convert("Europe/Madrid").dt.tz_localize(None)
 
-    tarjeta(
-        c5, "🌧️", "Lluvia",
-        datos.get("lluvia_acumulada_mm"), "mm", "blue"
-    )
+                if "fecha_grafica" not in df.columns:
+                    df["fecha_grafica"] = fechas_epoch
+                else:
+                    df["fecha_grafica"] = (
+                        df["fecha_grafica"].fillna(fechas_epoch)
+                    )
 
-    tarjeta(
-        c6, "☀️", "Índice UV",
-        datos.get("indice_uv"), "", "yellow"
-    )
+            # Convertir los valores a números.
 
-    # FILA 3
+            df["temperatura_C"] = pd.to_numeric(
+                df["temperatura_C"],
+                errors="coerce"
+            )
 
-    c7, c8 = st.columns(2)
+            df["lluvia_mm"] = pd.to_numeric(
+                df["lluvia_mm"],
+                errors="coerce"
+            )
 
-    tarjeta(
-        c7, "🔆", "Radiación solar",
-        datos.get("radiacion_solar_W_m2"), "W/m²", "green"
-    )
+            df = df.dropna(subset=["fecha_grafica"])
+            df = df.sort_values("fecha_grafica")
 
-    tarjeta(
-        c8, "🧭", "Dirección del viento",
-        datos.get("direccion_viento_grados"), "°", "turquoise"
-    )
+            # RESUMEN DE LAS ÚLTIMAS 24 HORAS
 
-    # AVISOS
+            temperaturas = df["temperatura_C"].dropna()
+            lluvias = df["lluvia_mm"].dropna()
 
-    try:
+            r1, r2, r3 = st.columns(3)
 
-        temperatura = float(datos.get("temperatura_C"))
+            if not temperaturas.empty:
 
-        if temperatura > 25:
+                r1.metric(
+                    "🌡️ Temperatura máxima",
+                    f"{temperaturas.max():.1f} °C"
+                )
 
-            st.markdown("""
-            <div class="aviso">
-                ⚠️ ¡Aviso educativo: Temperatura superior a 25 °C!
-            </div>
-            """, unsafe_allow_html=True)
+                r2.metric(
+                    "❄️ Temperatura mínima",
+                    f"{temperaturas.min():.1f} °C"
+                )
 
-    except (ValueError, TypeError):
-        pass
+            else:
+                r1.metric("🌡️ Temperatura máxima", "--")
+                r2.metric("❄️ Temperatura mínima", "--")
 
-else:
+            lluvia_total = lluvias.sum() if not lluvias.empty else 0
 
-    st.error(
-        "⚠️ No se pudo conectar con el servidor meteorológico."
-    )
+            r3.metric(
+                "🌧️ Lluvia total",
+                f"{lluvia_total:.1f} mm"
+            )
+
+            # GRÁFICA DE TEMPERATURA
+
+            st.markdown(
+                '<div class="grafica-titulo">'
+                '🌡️ Evolución de la temperatura'
+                '</div>',
+                unsafe_allow_html=True
+            )
+
+            df_temperatura = df.dropna(
+                subset=["temperatura_C"]
+            ).set_index("fecha_grafica")
+
+            if not df_temperatura.empty:
+
+                st.line_chart(
+                    df_temperatura[["temperatura_C"]],
+                    color="#ff303b",
+                    y_label="Temperatura (°C)",
+                    x_label="Hora",
+                    height=300
+                )
+
+            else:
+                st.info(
+                    "No hay datos de temperatura para representar."
+                )
+
+            # GRÁFICA DE PRECIPITACIONES
+
+            st.markdown(
+                '<div class="grafica-titulo">'
+                '🌧️ Precipitaciones por hora'
+                '</div>',
+                unsafe_allow_html=True
+            )
+
+            df_lluvia = df.dropna(
+                subset=["lluvia_mm"]
+            ).set_index("fecha_grafica")
+
+            if not df_lluvia.empty:
+
+                st.bar_chart(
+                    df_lluvia[["lluvia_mm"]],
+                    color="#00aaff",
+                    y_label="Lluvia (mm)",
+                    x_label="Hora",
+                    height=300
+                )
+
+            else:
+                st.info(
+                    "No hay datos de lluvia para representar."
+                )
+
+            st.caption(
+                f"Registros recibidos: {len(df)}. "
+                "Los valores corresponden a las observaciones "
+                "horarias disponibles."
+            )
+
+        else:
+
+            st.warning(
+                "Todavía no hay registros históricos disponibles."
+            )
+
+    else:
+
+        st.error(
+            "No se ha podido consultar el histórico meteorológico."
+        )
+
 
 # ==========================================
 # 8. PIE DE PÁGINA
