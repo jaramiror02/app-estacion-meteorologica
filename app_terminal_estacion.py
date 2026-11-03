@@ -15,8 +15,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-URL_API = "https://estacion-meteorologica-profe.onrender.com/api/estado"
-URL_HISTORICO = "https://estacion-meteorologica-profe.onrender.com/api/historico"
+URL_API = "https://estacion-meteorologica.onrender.com/api/estado"
+URL_HISTORICO = "https://estacion-meteorologica.onrender.com/api/historico"
 
 # ==========================================
 # 2. ACTUALIZACIÓN AUTOMÁTICA CADA 60 SEGUNDOS
